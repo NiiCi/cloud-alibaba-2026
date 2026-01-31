@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: service-order
+  profiles:
+    active: test
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+        namespace: 80546bd9-4745-417d-bc0e-1f60bdafb008
+        username: nacos
+        password: nacos
+      config:
+        server-addr: 127.0.0.1:8848
+        username: nacos
+        password: nacos
+        namespace: 80546bd9-4745-417d-bc0e-1f60bdafb008
+        prefix: server-order
+        file-extension: yml
+        # 禁用import check避免不必要的警告
+        import-check:
+          enabled: false
+
+
+
+server:
+  port: 8001
