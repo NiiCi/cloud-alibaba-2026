@@ -7,14 +7,16 @@ spring:
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
-        namespace: 80546bd9-4745-417d-bc0e-1f60bdafb008
+        #namespace: 80546bd9-4745-417d-bc0e-1f60bdafb008
+        namespace: 5d5d91ba-a655-497c-bbe5-f7fe9424a6ac
         username: nacos
         password: nacos
       config:
         server-addr: 127.0.0.1:8848
         username: nacos
         password: nacos
-        namespace: 80546bd9-4745-417d-bc0e-1f60bdafb008
+        #namespace: 80546bd9-4745-417d-bc0e-1f60bdafb008
+        namespace: 5d5d91ba-a655-497c-bbe5-f7fe9424a6ac
         prefix: server-order
         file-extension: yml
         # 禁用import check避免不必要的警告
