@@ -1,16 +1,19 @@
 package com.niici.order.service.impl;
 
 import com.niici.bean.order.Order;
-import com.niici.bean.product.Product;
+import com.niici.order.config.OrderProperties;
 import com.niici.order.service.OrderService;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 
 @Service
 @Slf4j
+@RefreshScope // 动态刷新nacos配置
 public class OrderServiceImpl implements OrderService {
 
     @Value("${order.timeout}")
@@ -18,6 +21,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Value("${order.auto-confirm}")
     private Boolean autoConfirm;
+
+    @Resource
+    private OrderProperties orderProperties;
 
 
 
@@ -35,7 +41,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public void getNacosConfig() {
-        log.info("timeOut: {}, autoConfirm: {}", timeOut, autoConfirm);
+        log.info("refreshScope 动态刷新 timeOut: {}, autoConfirm: {}", timeOut, autoConfirm);
+        log.info("configuration properties 动态刷新 timeOut: {}, autoConfirm: {}", orderProperties.getTimeOut(), orderProperties.getAutoConfirm());
     }
 
 
