@@ -18,9 +18,37 @@ spring:
         #namespace: 80546bd9-4745-417d-bc0e-1f60bdafb008
         namespace: 5d5d91ba-a655-497c-bbe5-f7fe9424a6ac
         prefix: server-order
-        file-extension: yml
+        file-extension: yml # 指定文件后缀
         # 禁用import check避免不必要的警告
         import-check:
           enabled: false
 server:
   port: 8001
+
+# 多环境指定加载不同数量的配置文件
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+    import:
+      - nacos:server-order.yml
+      #- nacos:server-xxx.yml
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+    import:
+      - nacos:server-order.yml
+      #- nacos:server-xxx.ymlå
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+    import:
+      - nacos:server-order.yml
+      #- nacos:server-xxx.ymlå
