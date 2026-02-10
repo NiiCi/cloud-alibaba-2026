@@ -1,7 +1,9 @@
 package com.niici.order.service.impl;
 
 import com.niici.bean.order.Order;
+import com.niici.bean.product.Product;
 import com.niici.order.config.OrderProperties;
+import com.niici.order.feign.ProductFeignClient;
 import com.niici.order.service.OrderService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +12,7 @@ import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 
 @Service
 @Slf4j
@@ -25,16 +28,20 @@ public class OrderServiceImpl implements OrderService {
     @Resource
     private OrderProperties orderProperties;
 
+    @Resource
+    private ProductFeignClient productFeignClient;
+
 
 
     @Override
     public Order createOrder(Long productId, Long userId) {
+        Product product = productFeignClient.getProduct(productId);
         return Order.builder()
                 .id(1L)
-                .totalAmount(new BigDecimal("100"))
+                .totalAmount(product.getPrice())
                 .userId(userId)
                 .userName("niici")
-                .productList(null)
+                .productList(Arrays.asList(product))
                 .build();
     }
 

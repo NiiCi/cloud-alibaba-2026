@@ -13,6 +13,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Product getById(Long id) {
+        log.info("test load balance");
         return Product.builder()
                 .id(1L)
                 .price(new BigDecimal("100"))
