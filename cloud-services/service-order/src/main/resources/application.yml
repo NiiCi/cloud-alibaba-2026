@@ -27,3 +27,8 @@ spring:
 
 server:
   port: 8001
+
+# 配置日志级别 -- 需要配置成debug
+logging:
+  level:
+    com.niici.order: debug
