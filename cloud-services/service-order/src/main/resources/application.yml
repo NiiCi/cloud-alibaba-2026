@@ -22,7 +22,19 @@ spring:
         # 禁用import check避免不必要的警告
         import-check:
           enabled: false
-
+    openfeign:
+      client:
+        config:
+          # 使用于所有的feignClient的默认配置
+          default:
+            connectTimeout: 1000
+            readTimeout: 2000
+            loggerLevel: full
+          # 自定义feignClient调用的超时时间
+          service-product:
+            connectTimeout: 3000
+            readTimeout: 5000
+            loggerLevel: full
 
 
 server:
