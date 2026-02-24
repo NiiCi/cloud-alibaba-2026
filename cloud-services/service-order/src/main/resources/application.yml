@@ -46,3 +46,8 @@ server:
 logging:
   level:
     com.niici.order: debug
+
+# 开启feign的sentinel支持
+feign:
+  sentinel:
+    enabled: true
