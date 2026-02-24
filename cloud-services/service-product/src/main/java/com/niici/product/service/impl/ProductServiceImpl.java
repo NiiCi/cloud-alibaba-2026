@@ -14,12 +14,12 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Product getById(Long id) {
         log.info("test load balance");
-        // test feign client 默认请求超时60s
-        try {
+        // test feign client 默认请求超时60s - 测试feign client超时以及重试
+        /*try {
             Thread.sleep(61000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
-        }
+        }*/
         return Product.builder()
                 .id(1L)
                 .price(new BigDecimal("100"))

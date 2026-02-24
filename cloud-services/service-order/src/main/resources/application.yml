@@ -30,6 +30,8 @@ spring:
             connectTimeout: 1000
             readTimeout: 2000
             loggerLevel: full
+#            request-interceptors: 添加自定义请求拦截器方式一
+#              - com.niici.order.interceptor.TokenRequestInterceptor
           # 自定义feignClient调用的超时时间
           service-product:
             connectTimeout: 3000
