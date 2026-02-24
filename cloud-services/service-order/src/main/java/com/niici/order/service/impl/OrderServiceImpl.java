@@ -1,5 +1,6 @@
 package com.niici.order.service.impl;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.niici.bean.order.Order;
 import com.niici.bean.product.Product;
 import com.niici.order.config.OrderProperties;
@@ -32,7 +33,7 @@ public class OrderServiceImpl implements OrderService {
     private ProductFeignClient productFeignClient;
 
 
-
+    @SentinelResource(value = "createOrder") // 声明式定义sentinel资源
     @Override
     public Order createOrder(Long productId, Long userId) {
         Product product = productFeignClient.getProduct(productId);

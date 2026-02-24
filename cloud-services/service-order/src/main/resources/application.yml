@@ -37,6 +37,11 @@ spring:
             connectTimeout: 3000
             readTimeout: 5000
             loggerLevel: full
+    # 配置sentinel的控制台地址 - 配置后可在sentinel控制台查看
+    sentinel:
+      transport:
+        dashboard: localhost:8080
+      eager: true # sentinel默认懒加载, 需要服务调用后才显示在控制台, 设置为true则会主动将规则同步到控制台
 
 
 server:
