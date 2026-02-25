@@ -20,6 +20,12 @@ public class OrderController {
         return orderService.createOrder(productId, userId);
     }
 
+    @GetMapping("/secKill")
+    public Order secKill(@RequestParam("userId") Long userId,
+                             @RequestParam("productId") Long productId) {
+        return orderService.createOrder(productId, userId);
+    }
+
     @GetMapping("/getNacosConfig")
     public void getNacosConfig() {
         orderService.getNacosConfig();

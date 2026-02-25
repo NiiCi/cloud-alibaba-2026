@@ -42,6 +42,7 @@ spring:
       transport:
         dashboard: localhost:8080
       eager: true # sentinel默认懒加载, 需要服务调用后才显示在控制台, 设置为true则会主动将规则同步到控制台
+      web-context-unify: false # 是否分割请求链路, true 不分割，false 分割 - 在流控规则为链路场景下，需要配置为false
 
 
 server:
