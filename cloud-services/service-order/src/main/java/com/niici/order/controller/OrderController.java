@@ -1,5 +1,6 @@
 package com.niici.order.controller;
 
+import com.niici.bean.common.Result;
 import com.niici.bean.order.Order;
 import com.niici.order.service.OrderService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,5 +30,15 @@ public class OrderController {
     @GetMapping("/getNacosConfig")
     public void getNacosConfig() {
         orderService.getNacosConfig();
+    }
+
+    @GetMapping("/writeDb")
+    public Result writeDb() {
+        return Result.success("writeDb success...");
+    }
+
+    @GetMapping("/readDb")
+    public Result readDb() {
+        return Result.success("readDb success...");
     }
 }
