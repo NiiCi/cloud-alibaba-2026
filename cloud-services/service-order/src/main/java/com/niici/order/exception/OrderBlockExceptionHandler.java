@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niici.bean.common.Result;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.apache.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 /**
@@ -23,6 +24,7 @@ public class OrderBlockExceptionHandler implements BlockExceptionHandler {
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, BlockException e) throws Exception {
+        response.setStatus(HttpStatus.SC_TOO_MANY_REQUESTS);
         response.setContentType("application/json; charset=utf-8");
 
         String message = "访问频繁，请稍后再试";
