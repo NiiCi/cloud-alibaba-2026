@@ -30,7 +30,7 @@ public class ProductServiceImpl implements ProductService {
         }*/
 
         // 测试 sentinal 熔断规则 - 异常比例
-        int i = 1 / 0;
+        //int i = 1 / 0;
 
         return Product.builder()
                 .id(1L)
