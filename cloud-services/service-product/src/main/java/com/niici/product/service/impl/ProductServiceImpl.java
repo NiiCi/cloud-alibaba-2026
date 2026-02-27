@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -20,6 +21,14 @@ public class ProductServiceImpl implements ProductService {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }*/
+
+        // 测试 sentinel 熔断规则 - 慢调用比例
+        /*try {
+            TimeUnit.SECONDS.sleep(2);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }*/
+
         return Product.builder()
                 .id(1L)
                 .price(new BigDecimal("100"))
