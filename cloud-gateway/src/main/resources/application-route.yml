@@ -1,0 +1,16 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        # 定义order服务的路由规则
+        - id: order-route
+          # 路由目标：负载均衡到admin-service服务（结合Nacos注册中心）
+          uri: lb://service-order
+          # 断言规则：路径匹配 + IP白名单
+          predicates:
+            - Path=/api/order/**
+        # 定义product服务的路由规则
+        - id: product-route
+          uri: lb://service-product
+          predicates:
+            - Path=/api/product/**

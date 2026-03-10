@@ -18,6 +18,11 @@
     </properties>
 
     <dependencies>
+        <!-- gateway 网关开启loadbalancer依赖, 缺少依赖会提示503 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>

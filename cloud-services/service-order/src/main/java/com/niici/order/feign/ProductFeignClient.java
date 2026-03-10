@@ -10,6 +10,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 public interface ProductFeignClient {
 
     // 与远程服务的接口定义需要一致
-    @GetMapping("/product/{id}")
+    @GetMapping("/api/product/{id}")
     Product getProduct(@PathVariable("id") Long id);
 }
