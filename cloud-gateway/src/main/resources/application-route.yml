@@ -14,3 +14,15 @@ spring:
           uri: lb://service-product
           predicates:
             - Path=/api/product/**
+        - id: user-route
+          uri: https://cn.bing.com/
+          predicates:
+            - Path=/search
+            - Query=q,haha
+            # 短写法
+            - Vip=user,niici
+            # 长写法
+#            - name: Vip
+#              args:
+#                param: user
+#                value: niici
