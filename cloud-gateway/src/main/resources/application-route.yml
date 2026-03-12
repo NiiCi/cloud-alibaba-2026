@@ -13,6 +13,7 @@ spring:
             # /api/order/xxx -> /xxx
             - RewritePath=/api/order/(?<segment>.*), /$\{segment}
             - AddResponseHeader=X-Request-Header-Test, gateway
+            - OnceTokenRequestHeader=X-Token, Uuid
         # 定义product服务的路由规则
         - id: product-route
           uri: lb://service-product

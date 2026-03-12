@@ -3,13 +3,12 @@ package com.niici.order.controller;
 import com.niici.bean.common.Result;
 import com.niici.bean.order.Order;
 import com.niici.order.service.OrderService;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import jakarta.annotation.Resource;
 
 //@RequestMapping("/api/order") // 测试gateway predicate断言用, 在测试gateway filter rewritePath时需注释
 @RestController
@@ -21,7 +20,9 @@ public class OrderController {
 
     @GetMapping("/create")
     public Order createOrder(@RequestParam("userId") Long userId,
-                             @RequestParam("productId") Long productId) {
+                             @RequestParam("productId") Long productId,
+                             HttpServletRequest request) {
+        log.info("once token: {}", request.getHeader("X-Token"));
         return orderService.createOrder(productId, userId);
     }
 
