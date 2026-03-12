@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.annotation.Resource;
 
-@RequestMapping("/api/order")
+//@RequestMapping("/api/order") // 测试gateway predicate断言用, 在测试gateway filter rewritePath时需注释
 @RestController
 @Slf4j
 public class OrderController {

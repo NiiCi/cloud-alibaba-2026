@@ -9,11 +9,16 @@ spring:
           # 断言规则：路径匹配 + IP白名单
           predicates:
             - Path=/api/order/**
+          filters:
+            # /api/order/xxx -> /xxx
+            - RewritePath=/api/order/(?<segment>.*), /$\{segment}
         # 定义product服务的路由规则
         - id: product-route
           uri: lb://service-product
           predicates:
             - Path=/api/product/**
+          filters:
+            - RewritePath=/api/product/(?<segment>.*), /$\{segment}
         - id: user-route
           uri: https://cn.bing.com/
           predicates:

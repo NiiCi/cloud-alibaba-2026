@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.annotation.Resource;
 
 @RestController
-@RequestMapping("/api/product")
+//@RequestMapping("/api/product") // 测试gateway predicate断言用, 在测试gateway filter rewritePath时需注释
 public class ProductController {
 
     @Resource
