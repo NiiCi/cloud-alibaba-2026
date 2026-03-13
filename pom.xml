@@ -7,6 +7,7 @@
         <module>cloud-services</module>
         <module>cloud-common</module>
         <module>cloud-gateway</module>
+        <module>cloud-seata</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>
