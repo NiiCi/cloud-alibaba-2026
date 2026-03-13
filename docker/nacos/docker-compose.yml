@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  nacos:
+    image: docker.xuanyuan.run/nacos/nacos-server:v2.3.2-slim # 双架构镜像，M1/M2/M3/Intel通用
+    container_name: nacos
+    ports:
+      - "8848:8848" # 端口映射，可修改左侧本地端口
+      - "9848:9848"  # Nacos 2.x gRPC通信端口（服务发现必用）
+      - "9849:9849"  # Nacos 2.x gRPC通信端口（配置中心必用）
+    environment:
+      - MODE=standalone # 必配单机模式，否则启动失败
+      - NACOS_AUTH_ENABLE=true # 开启鉴权，账号密码配置的前提
+      # 核心：自定义登录用户名+密码（可自行修改，推荐字母+数字组合）
+      - NACOS_USER_USERNAME=nacos # 你的自定义用户名
+      - NACOS_USER_PASSWORD=nacos # 你的自定义密码（建议复杂一点）
+      # 生产级密钥配置（必配，避免默认密钥，提升安全性）
+      - NACOS_AUTH_TOKEN=Y05SdzNRaU5oT1RJM05qSTVNakF4TURZd05UYzNOemsxTURZd01UYzNNakV3 # 自定义令牌（Base64编码，可自行生成）
+      - NACOS_AUTH_IDENTITY_KEY=nacos_custom_key # 自定义身份密钥
+      - NACOS_AUTH_IDENTITY_VALUE=nacos_custom_value_2026 # 自定义身份值
+      # ARM64内存优化，避免Mac卡顿，低配Mac可保留
+      - JVM_XMS=256m
+      - JVM_XMX=256m
+      - JVM_XMN=128m
+    volumes:
+      # 持久化挂载：本地目录保存数据/日志，容器删除不丢失
+      - ./nacos/data:/home/nacos/data
+      - ./nacos/logs:/home/nacos/logs
+    restart: always # 容器意外退出自动重启
+    # 限制Mac资源占用，低配Mac推荐保留
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+    networks:
+      - nacos-network
+
+# 自定义桥接网络，隔离容器环境
+networks:
+  nacos-network:
+    driver: bridge

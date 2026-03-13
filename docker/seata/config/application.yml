@@ -1,0 +1,43 @@
+server:
+  port: 8091
+spring:
+  application:
+    name: seata-server
+seata:
+  registry:
+    # 注册中心：Nacos
+    type: nacos
+    nacos:
+      server-addr: localhost:8848 # 替换为你的 Nacos 地址
+      namespace: "5d5d91ba-a655-497c-bbe5-f7fe9424a6ac" # Nacos 命名空间（无则留空）
+      group: SEATA_GROUP
+      application: seata-server
+      username: nacos # Nacos 用户名（无则省略）
+      password: nacos # Nacos 密码（无则省略）
+  config:
+    # 配置中心：Nacos（也可复用文件配置）
+    type: nacos
+    nacos:
+      server-addr: localhost:8848
+      namespace: "5d5d91ba-a655-497c-bbe5-f7fe9424a6ac"
+      group: SEATA_GROUP
+  store:
+    # 存储模式：db（MySQL）
+    mode: db
+    db:
+      datasource: druid
+      db-type: mysql
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/seata?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true
+      user: root # MySQL 用户名
+      password: root # MySQL 密码
+      min-conn: 5
+      max-conn: 30
+      global-table: global_table
+      branch-table: branch_table
+      lock-table: lock_table
+      undo-log-table: undo_log
+  security:
+    secretKey: SeataSecretKey0c382ef121d778043159209298fd40bf3850a017
+    tokenValidityInMilliseconds: 1800000
+    ignoreUrls: /,/**/*.css,/**/*.js,/**/*.html,/**/*.map,/**/*.svg,/**/*.png,/**/*.ico,/console-fe/public/**,/api/v1/auth/login

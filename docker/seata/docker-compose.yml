@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  # Seata-Server 2.0.0
+  seata-server:
+    image: seataio/seata-server:2.0.0
+    container_name: seata-server
+    ports:
+      - "8091:8091"
+      - "7091:7091"
+    volumes:
+      - /Users/niici/local/seata/config:/seata-config
+      - /Users/niici/local/seata/logs:/root/seata-server/logs
+    environment:
+      - SEATA_CONFIG_NAME=file:/seata-config/application.yml
+      - TZ=Asia/Shanghai
+    networks:
+      - seata-network
+    restart: always # 异常重启
+
+networks:
+  seata-network:
+    driver: bridge

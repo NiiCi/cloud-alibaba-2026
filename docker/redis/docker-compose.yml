@@ -1,0 +1,14 @@
+# docker-compose.yml
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis7
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis_data:/data
+    # 无密码，仅开启默认持久化
+    command: redis-server --save 60 1 --appendonly yes
