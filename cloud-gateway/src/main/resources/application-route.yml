@@ -1,6 +1,20 @@
 spring:
   cloud:
     gateway:
+      # 配置全局跨域
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origin-patterns: "*"  # 指定具体域名或 pattern 生产环境（需要携带 cookie 或 Authorization）
+            # allowed-origins: "*"        # 与 credentials 不兼容
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowed-headers: "*"
+            allow-credentials: true # 控制跨域请求时，浏览器是否允许携带凭证信息
       routes:
         # 定义order服务的路由规则
         - id: order-route
