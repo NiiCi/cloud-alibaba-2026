@@ -4,15 +4,15 @@ import com.niici.order.bean.OrderTbl;
 import com.niici.order.feign.AccountFeignClient;
 import com.niici.order.mapper.OrderTblMapper;
 import com.niici.order.service.OrderService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class OrderServiceImpl implements OrderService {
-    @Autowired
+    @Resource
     OrderTblMapper orderTblMapper;
-    @Autowired
+    @Resource
     AccountFeignClient accountFeignClient;
 
     @Override
@@ -21,7 +21,7 @@ public class OrderServiceImpl implements OrderService {
         // 1、计算订单价格
         int orderMoney = calculate(commodityCode, orderCount);
 
-        // 2、扣减账户余额
+        // 2.扣减余额
         accountFeignClient.debit(userId, orderMoney);
 
         //3、保存订单

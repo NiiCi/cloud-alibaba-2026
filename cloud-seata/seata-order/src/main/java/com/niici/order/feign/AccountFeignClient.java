@@ -12,5 +12,5 @@ public interface AccountFeignClient {
      */
     @GetMapping("/debit")
     String debit(@RequestParam("userId") String userId,
-                        @RequestParam("money") int money);
+                 @RequestParam("money") int money);
 }
