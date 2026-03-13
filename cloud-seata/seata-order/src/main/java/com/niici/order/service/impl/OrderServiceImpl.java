@@ -34,13 +34,13 @@ public class OrderServiceImpl implements OrderService {
         orderTblMapper.insert(orderTbl);
 
         // 模拟异常
-        int i = 10/0;
+        //int i = 10/0;
 
         return orderTbl;
     }
 
     // 计算价格
     private int calculate(String commodityCode, int orderCount) {
-        return 9*orderCount;
+        return 9 * orderCount;
     }
 }

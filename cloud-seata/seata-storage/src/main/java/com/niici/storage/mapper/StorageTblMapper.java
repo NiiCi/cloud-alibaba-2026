@@ -1,6 +1,7 @@
 package com.niici.storage.mapper;
 
 import com.niici.storage.bean.StorageTbl;
+import org.apache.ibatis.annotations.Param;
 
 /**
 * @author lfy
@@ -22,5 +23,5 @@ public interface StorageTblMapper {
 
     int updateByPrimaryKey(StorageTbl record);
 
-    void deduct(String commodityCode, int count);
+    void deduct(@Param("commodityCode") String commodityCode, @Param("count") int count);
 }

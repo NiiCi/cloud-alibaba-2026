@@ -47,3 +47,10 @@ spring:
 #              args:
 #                param: user
 #                value: niici
+        # 定义seata-business服务路由
+        - id: business-route
+          uri: lb://seata-business
+          predicates:
+            - Path=/api/business/**
+          filters:
+            - RewritePath=/api/business/(?<segment>.*), /$\{segment}

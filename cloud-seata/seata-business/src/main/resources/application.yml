@@ -21,4 +21,8 @@ spring:
           enabled: false
 server:
   port: 11000
+# 配置日志级别 -- 需要配置成debug
+logging:
+  level:
+    com.niici.business: debug
 
