@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.atguigu.account.mapper.AccountTblMapper">
+<mapper namespace="com.niici.account.mapper.AccountTblMapper">
 
-    <resultMap id="BaseResultMap" type="com.atguigu.account.bean.AccountTbl">
+    <resultMap id="BaseResultMap" type="com.niici.account.bean.AccountTbl">
             <id property="id" column="id" jdbcType="INTEGER"/>
             <result property="userId" column="user_id" jdbcType="VARCHAR"/>
             <result property="money" column="money" jdbcType="INTEGER"/>
@@ -25,14 +25,14 @@
         delete from account_tbl
         where  id = #{id,jdbcType=INTEGER} 
     </delete>
-    <insert id="insert" keyColumn="id" keyProperty="id" parameterType="com.atguigu.account.bean.AccountTbl" useGeneratedKeys="true">
+    <insert id="insert" keyColumn="id" keyProperty="id" parameterType="com.niici.account.bean.AccountTbl" useGeneratedKeys="true">
         insert into account_tbl
         ( id,user_id,money
         )
         values (#{id,jdbcType=INTEGER},#{userId,jdbcType=VARCHAR},#{money,jdbcType=INTEGER}
         )
     </insert>
-    <insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="com.atguigu.account.bean.AccountTbl" useGeneratedKeys="true">
+    <insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="com.niici.account.bean.AccountTbl" useGeneratedKeys="true">
         insert into account_tbl
         <trim prefix="(" suffix=")" suffixOverrides=",">
                 <if test="id != null">id,</if>
@@ -45,7 +45,7 @@
                 <if test="money != null">#{money,jdbcType=INTEGER},</if>
         </trim>
     </insert>
-    <update id="updateByPrimaryKeySelective" parameterType="com.atguigu.account.bean.AccountTbl">
+    <update id="updateByPrimaryKeySelective" parameterType="com.niici.account.bean.AccountTbl">
         update account_tbl
         <set>
                 <if test="userId != null">
@@ -57,7 +57,7 @@
         </set>
         where   id = #{id,jdbcType=INTEGER} 
     </update>
-    <update id="updateByPrimaryKey" parameterType="com.atguigu.account.bean.AccountTbl">
+    <update id="updateByPrimaryKey" parameterType="com.niici.account.bean.AccountTbl">
         update account_tbl
         set 
             user_id =  #{userId,jdbcType=VARCHAR},
