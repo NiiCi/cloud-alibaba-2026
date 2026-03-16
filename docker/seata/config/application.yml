@@ -1,42 +1,49 @@
 server:
-  port: 8091
+  port: 8091  # Seata 通信端口
+  servlet:
+    context-path: /seata  # 控制台访问路径
+
 spring:
   application:
     name: seata-server
+
+logging:
+  config: classpath:logback-spring.xml
+  file:
+    path: /seata-server/logs  # 日志挂载目录
+  level:
+    io.seata: info
+    com.alibaba.nacos: info  # 增加Nacos日志，便于排查连接问题
+
+# 必须在根级别，不能放在 seata: 下
+console:
+  user:
+    username: seata
+    password: seata
+
+# 核心：配置中心指向Nacos（仅保留连接信息，核心配置放Nacos）
 seata:
-  registry:
-    # 注册中心：Nacos
-    type: nacos
-    nacos:
-      server-addr: localhost:8848 # 替换为你的 Nacos 地址
-      namespace: "5d5d91ba-a655-497c-bbe5-f7fe9424a6ac" # Nacos 命名空间（无则留空）
-      group: SEATA_GROUP
-      application: seata-server
-      username: nacos # Nacos 用户名（无则省略）
-      password: nacos # Nacos 密码（无则省略）
+  # 配置中心配置（仅配置如何连接Nacos）
   config:
-    # 配置中心：Nacos（也可复用文件配置）
     type: nacos
     nacos:
-      server-addr: localhost:8848
-      namespace: "5d5d91ba-a655-497c-bbe5-f7fe9424a6ac"
-      group: SEATA_GROUP
-  store:
-    # 存储模式：db（MySQL）
-    mode: db
-    db:
-      datasource: druid
-      db-type: mysql
-      driver-class-name: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://localhost:3306/seata?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true
-      user: root # MySQL 用户名
-      password: root # MySQL 密码
-      min-conn: 5
-      max-conn: 30
-      global-table: global_table
-      branch-table: branch_table
-      lock-table: lock_table
-      undo-log-table: undo_log
+      server-addr: nacos:8848  # 替换为你的Nacos地址
+      namespace: 5d5d91ba-a655-497c-bbe5-f7fe9424a6ac  # 替换为你的Nacos命名空间（无则保留public）
+      group: SEATA_GROUP  # Nacos配置分组（建议固定为SEATA_GROUP）
+      username: nacos  # Nacos账号（无则删除）
+      password: nacos  # Nacos密码（无则删除）
+      data-id: seata-server.properties  # Nacos中配置文件的DataID（自定义，建议用这个）
+  # 注册中心配置（若注册中心也用Nacos，仅保留连接信息，核心配置放Nacos）
+  registry:
+    type: nacos
+    nacos:
+      server-addr: ${seata.config.nacos.server-addr}  # 复用Nacos地址，避免重复配置
+      namespace: ${seata.config.nacos.namespace}
+      group: ${seata.config.nacos.group}
+      username: ${seata.config.nacos.username}
+      password: ${seata.config.nacos.password}
+      application: seata-server  # 注册到Nacos的服务名
+      cluster: default  # 集群名称
   security:
     secretKey: SeataSecretKey0c382ef121d778043159209298fd40bf3850a017
     tokenValidityInMilliseconds: 1800000

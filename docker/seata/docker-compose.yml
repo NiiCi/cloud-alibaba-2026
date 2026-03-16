@@ -1,22 +1,31 @@
 version: '3.8'
+
 services:
-  # Seata-Server 2.0.0
   seata-server:
     image: seataio/seata-server:2.0.0
     container_name: seata-server
+    restart: always  # 异常重启
     ports:
       - "8091:8091"
       - "7091:7091"
     volumes:
-      - /Users/niici/local/seata/config:/seata-config
-      - /Users/niici/local/seata/logs:/root/seata-server/logs
-    environment:
-      - SEATA_CONFIG_NAME=file:/seata-config/application.yml
-      - TZ=Asia/Shanghai
+      # 挂载自定义配置文件（覆盖容器默认配置）
+      - /Users/niici/local/seata/config/application.yml:/seata-server/resources/application.yml
+      # 挂载日志目录（宿主机可查看）
+      - /Users/niici/local/seata/logs:/seata-server/logs
+    #environment:
+    #  - TZ=Asia/Shanghai  # 时区同步
+    #  - SEATA_IP=你的服务器IP  # 若Nacos注册需要指定真实IP
+    #  - SEATA_PORT=8091
+    # 解决DB连接超时问题（可选）
+    #extra_hosts:
+    #  - "mysql-server:192.168.1.100"  # 映射MySQL域名（与application.yml中的url对应）
     networks:
       - seata-network
-    restart: always # 异常重启
+      - nacos_nacos-network
 
 networks:
   seata-network:
     driver: bridge
+  nacos_nacos-network:
+    external: true
