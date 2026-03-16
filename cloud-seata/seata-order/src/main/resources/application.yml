@@ -35,3 +35,28 @@ mybatis:
 logging:
   level:
     com.niici.order: debug
+
+seata:
+  enabled: true
+  application-id: seata-order
+  tx-service-group: default_tx_group
+  registry:
+    type: file
+  #    type: nacos
+#    nacos:
+#      server-addr: 127.0.0.1:8848
+#      namespace: 5d5d91ba-a655-497c-bbe5-f7fe9424a6ac
+#      group: SEATA_GROUP
+#      application: seata-server
+#      username: nacos
+#      password: nacos
+  config:
+    type: nacos
+    nacos:
+      server-addr: 127.0.0.1:8848
+      namespace: 5d5d91ba-a655-497c-bbe5-f7fe9424a6ac
+      group: SEATA_GROUP
+      username: nacos
+      password: nacos
+      data-id: seata-client.properties
+

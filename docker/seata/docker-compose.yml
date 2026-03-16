@@ -13,19 +13,12 @@ services:
       - /Users/niici/local/seata/config/application.yml:/seata-server/resources/application.yml
       # 挂载日志目录（宿主机可查看）
       - /Users/niici/local/seata/logs:/seata-server/logs
-    #environment:
-    #  - TZ=Asia/Shanghai  # 时区同步
-    #  - SEATA_IP=你的服务器IP  # 若Nacos注册需要指定真实IP
-    #  - SEATA_PORT=8091
-    # 解决DB连接超时问题（可选）
-    #extra_hosts:
-    #  - "mysql-server:192.168.1.100"  # 映射MySQL域名（与application.yml中的url对应）
     networks:
-      - seata-network
-      - nacos_nacos-network
+      - seata-network 
+      #- nacos_nacos-network
 
 networks:
   seata-network:
     driver: bridge
-  nacos_nacos-network:
-    external: true
+  # nacos_nacos-network:
+  #   external: true 

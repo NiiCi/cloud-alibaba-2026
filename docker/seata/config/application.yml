@@ -1,5 +1,5 @@
 server:
-  port: 8091  # Seata 通信端口
+  port: 7091  # Seata 通信端口
   servlet:
     context-path: /seata  # 控制台访问路径
 
@@ -27,7 +27,7 @@ seata:
   config:
     type: nacos
     nacos:
-      server-addr: nacos:8848  # 替换为你的Nacos地址
+      server-addr: host.docker.internal:8848  # 替换为你的Nacos地址
       namespace: 5d5d91ba-a655-497c-bbe5-f7fe9424a6ac  # 替换为你的Nacos命名空间（无则保留public）
       group: SEATA_GROUP  # Nacos配置分组（建议固定为SEATA_GROUP）
       username: nacos  # Nacos账号（无则删除）

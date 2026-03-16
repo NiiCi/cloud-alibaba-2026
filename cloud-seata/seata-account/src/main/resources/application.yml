@@ -30,3 +30,29 @@ server:
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
+
+seata:
+  enabled: true
+  application-id: seata-account
+  tx-service-group: default_tx_group  # 事务组名，需与server端一致
+  # 从nacos上获取seata-server, 用于建立连接、发送事务请求
+  registry:
+    type: file
+#    type: nacos
+#    nacos:
+#      server-addr: 127.0.0.1:8848
+#      namespace: 5d5d91ba-a655-497c-bbe5-f7fe9424a6ac
+#      group: SEATA_GROUP
+#      application: seata-server  # 对应seata-server在Nacos注册的服务名
+#      username: nacos
+#      password: nacos
+  # 从nacos上获取seata客户端配置
+  config:
+    type: nacos
+    nacos:
+      server-addr: 127.0.0.1:8848
+      namespace: 5d5d91ba-a655-497c-bbe5-f7fe9424a6ac
+      group: SEATA_GROUP
+      username: nacos
+      password: nacos
+      data-id: seata-client.properties
