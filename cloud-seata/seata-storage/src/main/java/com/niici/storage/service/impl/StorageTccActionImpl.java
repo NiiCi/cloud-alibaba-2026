@@ -28,6 +28,8 @@ public class StorageTccActionImpl implements StorageTccAction {
         log.info("StorageTcc Try阶段 - 冻结库存: commodityCode={}, count={}, xid={}",
                 commodityCode, count, actionContext.getXid());
         storageTblMapper.tryDeduct(commodityCode, count);
+        // Seata 2.x 对 primitive int 序列化存在问题，显式存储数值参数确保 confirm/cancel 可正确读取
+        actionContext.addActionContext("count", String.valueOf(count));
         return true;
     }
 
@@ -38,7 +40,8 @@ public class StorageTccActionImpl implements StorageTccAction {
     @Transactional(rollbackFor = Exception.class)
     public boolean confirm(BusinessActionContext actionContext) {
         String commodityCode = (String) actionContext.getActionContext("commodityCode");
-        int count = Integer.parseInt(actionContext.getActionContext("count").toString());
+        Object countObj = actionContext.getActionContext("count");
+        int count = countObj != null ? Integer.parseInt(countObj.toString()) : 0;
         log.info("StorageTcc Confirm阶段 - 确认扣减冻结库存: commodityCode={}, count={}, xid={}",
                 commodityCode, count, actionContext.getXid());
         storageTblMapper.confirmDeduct(commodityCode, count);
@@ -52,7 +55,8 @@ public class StorageTccActionImpl implements StorageTccAction {
     @Transactional(rollbackFor = Exception.class)
     public boolean cancel(BusinessActionContext actionContext) {
         String commodityCode = (String) actionContext.getActionContext("commodityCode");
-        int count = Integer.parseInt(actionContext.getActionContext("count").toString());
+        Object countObj = actionContext.getActionContext("count");
+        int count = countObj != null ? Integer.parseInt(countObj.toString()) : 0;
         log.info("StorageTcc Cancel阶段 - 释放冻结库存: commodityCode={}, count={}, xid={}",
                 commodityCode, count, actionContext.getXid());
         storageTblMapper.cancelDeduct(commodityCode, count);

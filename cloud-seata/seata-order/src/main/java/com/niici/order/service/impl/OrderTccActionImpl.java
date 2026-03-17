@@ -46,6 +46,13 @@ public class OrderTccActionImpl implements OrderTccAction {
         orderTblMapper.insert(orderTbl);
         // 将订单 id 存入 TCC 上下文，供 Confirm/Cancel 阶段使用
         actionContext.addActionContext("orderId", orderTbl.getId());
+
+        // ===== 模拟异常：触发 TCC 全局回滚 =====
+        // 此时 storage Try（库存冻结）和 account Try（余额冻结）均已执行
+        // 抛出异常后，Seata TC 将依次回调所有参与方的 cancel 方法，验证数据是否完整还原
+        int i = 10 / 0;
+        // ===== 模拟异常结束 =====
+
         return true;
     }
 
@@ -55,9 +62,12 @@ public class OrderTccActionImpl implements OrderTccAction {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean confirm(BusinessActionContext actionContext) {
-        Integer orderId = Integer.parseInt(actionContext.getActionContext("orderId").toString());
+        Object orderIdObj = actionContext.getActionContext("orderId");
+        Integer orderId = orderIdObj != null ? Integer.parseInt(orderIdObj.toString()) : null;
         log.info("OrderTcc Confirm阶段 - 确认订单: orderId={}, xid={}", orderId, actionContext.getXid());
-        orderTblMapper.confirmOrder(orderId);
+        if (orderId != null) {
+            orderTblMapper.confirmOrder(orderId);
+        }
         return true;
     }
 
