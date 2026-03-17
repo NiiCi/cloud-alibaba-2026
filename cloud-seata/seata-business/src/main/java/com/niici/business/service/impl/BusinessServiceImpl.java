@@ -27,7 +27,7 @@ public class BusinessServiceImpl implements BusinessService {
     @GlobalTransactional
     public void purchase(String userId, String commodityCode, int orderCount) {
         // 1. 扣减库存
-        storageFeignClient.deduct(commodityCode, orderCount);
+        storageFeignClient.deduct(commodityCode, orderCount); // debug调试入口
         // 2. 创建订单
         orderFeignClient.create(userId, commodityCode, orderCount);
     }
