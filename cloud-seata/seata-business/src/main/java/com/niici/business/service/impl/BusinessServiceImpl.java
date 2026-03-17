@@ -3,6 +3,7 @@ package com.niici.business.service.impl;
 import com.niici.business.feign.OrderFeignClient;
 import com.niici.business.feign.StorageFeignClient;
 import com.niici.business.service.BusinessService;
+import io.seata.spring.annotation.GlobalTransactional;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,8 +23,8 @@ public class BusinessServiceImpl implements BusinessService {
      * @param orderCount        购买数量
      */
     @Override
-    // 使用seata全局事务
-    //@GlobalTransactional
+    // seata全局事务, 开启后可控制该方法下所有远程方法的事务
+    @GlobalTransactional
     public void purchase(String userId, String commodityCode, int orderCount) {
         // 1. 扣减库存
         storageFeignClient.deduct(commodityCode, orderCount);
