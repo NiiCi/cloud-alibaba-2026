@@ -11,7 +11,6 @@ spring:
       server-addr: 127.0.0.1:8848
       discovery:
         server-addr: 127.0.0.1:8848
-        #namespace: 80546bd9-4745-417d-bc0e-1f60bdafb008
         namespace: 5d5d91ba-a655-497c-bbe5-f7fe9424a6ac
         username: nacos
         password: nacos
@@ -37,7 +36,7 @@ seata:
   tx-service-group: default_tx_group  # 事务组名，需与server端一致
   # 从nacos上获取seata-server, 用于建立连接、发送事务请求
   registry:
-    type: file
+    type: file #指定从本地文件中获取seata-server地址
 #    type: nacos
 #    nacos:
 #      server-addr: 127.0.0.1:8848
