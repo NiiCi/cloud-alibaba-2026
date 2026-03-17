@@ -18,5 +18,8 @@ public class OrderTbl implements Serializable {
 
     private Integer money;
 
+    /** 订单状态: 0-TCC Try预创建, 1-Confirm已确认, 2-Cancel已取消 */
+    private Integer status;
+
     private static final long serialVersionUID = 1L;
 }

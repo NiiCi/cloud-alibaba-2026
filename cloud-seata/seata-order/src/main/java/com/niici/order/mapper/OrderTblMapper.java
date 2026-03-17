@@ -1,6 +1,7 @@
 package com.niici.order.mapper;
 
 import com.niici.order.bean.OrderTbl;
+import org.apache.ibatis.annotations.Param;
 
 /**
 * @author lfy
@@ -21,5 +22,15 @@ public interface OrderTblMapper {
     int updateByPrimaryKeySelective(OrderTbl record);
 
     int updateByPrimaryKey(OrderTbl record);
+
+    /**
+     * TCC Confirm阶段：更新订单状态为已确认
+     */
+    void confirmOrder(@Param("id") Integer id);
+
+    /**
+     * TCC Cancel阶段：更新订单状态为已取消
+     */
+    void cancelOrder(@Param("id") Integer id);
 
 }

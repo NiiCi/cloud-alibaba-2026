@@ -14,5 +14,8 @@ public class StorageTbl implements Serializable {
 
     private Integer count;
 
+    /** TCC Try阶段冻结的库存数量 */
+    private Integer frozenCount;
+
     private static final long serialVersionUID = 1L;
 }

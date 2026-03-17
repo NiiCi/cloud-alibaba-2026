@@ -17,4 +17,7 @@ public class AccountTbl implements Serializable {
 
     private Integer money;
 
+    /** TCC Try阶段冻结的余额 */
+    private Integer frozenMoney;
+
 }

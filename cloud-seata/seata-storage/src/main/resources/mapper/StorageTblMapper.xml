@@ -8,6 +8,7 @@
             <id property="id" column="id" jdbcType="INTEGER"/>
             <result property="commodityCode" column="commodity_code" jdbcType="VARCHAR"/>
             <result property="count" column="count" jdbcType="INTEGER"/>
+            <result property="frozenCount" column="frozen_count" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -68,5 +69,26 @@
         update storage_tbl
         set count = count - #{count}
         where commodity_code = #{commodityCode}
+    </update>
+
+    <!-- TCC Try阶段：扣减可用库存，增加冻结库存 -->
+    <update id="tryDeduct">
+        UPDATE storage_tbl
+        SET count = count - #{count}, frozen_count = frozen_count + #{count}
+        WHERE commodity_code = #{commodityCode} AND count &gt;= #{count}
+    </update>
+
+    <!-- TCC Confirm阶段：扣减冻结库存（正式提交） -->
+    <update id="confirmDeduct">
+        UPDATE storage_tbl
+        SET frozen_count = frozen_count - #{count}
+        WHERE commodity_code = #{commodityCode}
+    </update>
+
+    <!-- TCC Cancel阶段：恢复可用库存，释放冻结库存 -->
+    <update id="cancelDeduct">
+        UPDATE storage_tbl
+        SET count = count + #{count}, frozen_count = frozen_count - #{count}
+        WHERE commodity_code = #{commodityCode}
     </update>
 </mapper>

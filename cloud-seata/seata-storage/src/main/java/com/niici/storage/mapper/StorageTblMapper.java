@@ -24,4 +24,19 @@ public interface StorageTblMapper {
     int updateByPrimaryKey(StorageTbl record);
 
     void deduct(@Param("commodityCode") String commodityCode, @Param("count") int count);
+
+    /**
+     * TCC Try阶段：扣减可用库存，增加冻结库存
+     */
+    void tryDeduct(@Param("commodityCode") String commodityCode, @Param("count") int count);
+
+    /**
+     * TCC Confirm阶段：扣减冻结库存（正式提交）
+     */
+    void confirmDeduct(@Param("commodityCode") String commodityCode, @Param("count") int count);
+
+    /**
+     * TCC Cancel阶段：恢复可用库存，释放冻结库存
+     */
+    void cancelDeduct(@Param("commodityCode") String commodityCode, @Param("count") int count);
 }

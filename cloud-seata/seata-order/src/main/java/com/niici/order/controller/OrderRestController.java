@@ -1,8 +1,7 @@
 package com.niici.order.controller;
 
-
-import com.niici.order.bean.OrderTbl;
-import com.niici.order.service.OrderService;
+import com.niici.order.service.OrderTccAction;
+import io.seata.rm.tcc.api.BusinessActionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -12,23 +11,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrderRestController {
 
     @Autowired
-    OrderService orderService;
-
+    OrderTccAction orderTccAction;
 
     /**
-     * 创建订单
-     * @param userId
-     * @param commodityCode
-     * @param orderCount
-     * @return
+     * 创建订单（TCC Try 阶段入口）
      */
     @GetMapping("/create")
     public String create(@RequestParam("userId") String userId,
                          @RequestParam("commodityCode") String commodityCode,
-                         @RequestParam("count") int orderCount)
-    {
-        OrderTbl tbl = orderService.create(userId, commodityCode, orderCount);
-        return "order create success = 订单id：【"+tbl.getId()+"】";
+                         @RequestParam("count") int orderCount) {
+        orderTccAction.tryCreate(new BusinessActionContext(), userId, commodityCode, orderCount);
+        return "order create success";
     }
-
 }

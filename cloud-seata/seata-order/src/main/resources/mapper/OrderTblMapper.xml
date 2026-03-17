@@ -10,6 +10,7 @@
             <result property="commodityCode" column="commodity_code" jdbcType="VARCHAR"/>
             <result property="count" column="count" jdbcType="INTEGER"/>
             <result property="money" column="money" jdbcType="INTEGER"/>
+            <result property="status" column="status" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -32,9 +33,9 @@
             useGeneratedKeys="true">
         insert into order_tbl
         ( id,user_id,commodity_code
-        ,count,money)
+        ,count,money,status)
         values (#{id,jdbcType=INTEGER},#{userId,jdbcType=VARCHAR},#{commodityCode,jdbcType=VARCHAR}
-        ,#{count,jdbcType=INTEGER},#{money,jdbcType=INTEGER})
+        ,#{count,jdbcType=INTEGER},#{money,jdbcType=INTEGER},#{status,jdbcType=INTEGER})
     </insert>
     <insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="com.niici.order.bean.OrderTbl" useGeneratedKeys="true">
         insert into order_tbl
@@ -79,5 +80,15 @@
             count =  #{count,jdbcType=INTEGER},
             money =  #{money,jdbcType=INTEGER}
         where   id = #{id,jdbcType=INTEGER} 
+    </update>
+
+    <!-- TCC Confirm阶段：更新订单状态为已确认 -->
+    <update id="confirmOrder">
+        UPDATE order_tbl SET status = 1 WHERE id = #{id}
+    </update>
+
+    <!-- TCC Cancel阶段：更新订单状态为已取消 -->
+    <update id="cancelOrder">
+        UPDATE order_tbl SET status = 2 WHERE id = #{id}
     </update>
 </mapper>

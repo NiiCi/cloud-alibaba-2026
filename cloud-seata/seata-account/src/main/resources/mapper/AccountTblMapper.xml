@@ -8,6 +8,7 @@
             <id property="id" column="id" jdbcType="INTEGER"/>
             <result property="userId" column="user_id" jdbcType="VARCHAR"/>
             <result property="money" column="money" jdbcType="INTEGER"/>
+            <result property="frozenMoney" column="frozen_money" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -68,5 +69,26 @@
         update account_tbl
         set money = money - #{money,jdbcType=INTEGER}
         where user_id = #{userId,jdbcType=VARCHAR}
+    </update>
+
+    <!-- TCC Try阶段：扣减可用余额，增加冻结余额 -->
+    <update id="tryDebit">
+        UPDATE account_tbl
+        SET money = money - #{money}, frozen_money = frozen_money + #{money}
+        WHERE user_id = #{userId} AND money &gt;= #{money}
+    </update>
+
+    <!-- TCC Confirm阶段：扣减冻结余额（正式提交） -->
+    <update id="confirmDebit">
+        UPDATE account_tbl
+        SET frozen_money = frozen_money - #{money}
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- TCC Cancel阶段：恢复可用余额，释放冻结余额 -->
+    <update id="cancelDebit">
+        UPDATE account_tbl
+        SET money = money + #{money}, frozen_money = frozen_money - #{money}
+        WHERE user_id = #{userId}
     </update>
 </mapper>
