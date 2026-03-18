@@ -2,49 +2,121 @@ version: '3.8'
 
 services:
 
-  # ==================== Elasticsearch ====================
-  elasticsearch:
+  # ==================== Elasticsearch Node 1 ====================
+  es-node-1:
     image: elasticsearch:8.11.4
-    container_name: elasticsearch
+    container_name: es-node-1
     restart: always
     environment:
-      # 单节点模式（无需集群选举）
-      - discovery.type=single-node
-      # JVM 堆内存（生产环境建议 1g+）
-      - ES_JAVA_OPTS=-Xms1g -Xmx1g
-      # Apple M4 芯片适配：禁用 SVE 指令集，避免 JVM 启动时 SIGILL 崩溃
-      # 注意：必须使用 _JAVA_OPTIONS，ES 会忽略 JAVA_TOOL_OPTIONS
+      # JVM 堆内存（3 节点各 512m，总计 1.5g，需 Docker Desktop 内存 ≥ 6GB）
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
       - _JAVA_OPTIONS=-XX:UseSVE=0
-      # 启用 X-Pack 安全认证
-      - xpack.security.enabled=true
-      # 关闭自动注册（单节点无需）
-      - xpack.security.enrollment.enabled=false
-      # 本地开发关闭 HTTP SSL，避免 certutil 在 ARM64 上崩溃
-      - xpack.security.http.ssl.enabled=false
-      # 单节点无需传输层 SSL
-      - xpack.security.transport.ssl.enabled=false
-      # 内置超级管理员 elastic 的密码，用户名是 elastic
-      - ELASTIC_PASSWORD=Es@2026#Admin
-      # 集群名称
       - cluster.name=es-dev-cluster
-      # 节点名称
-      - node.name=es-dev-node-1
+      - node.name=es-node-1
+      - discovery.seed_hosts=es-node-2,es-node-3
+      - cluster.initial_master_nodes=es-node-1,es-node-2,es-node-3
+      # 安全认证
+      - xpack.security.enabled=true
+      - xpack.security.enrollment.enabled=false
+      # HTTP 层不开 SSL（开发环境，API 访问更方便）
+      - xpack.security.http.ssl.enabled=false
+      # 传输层 SSL（集群节点间通信必须开启）
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/ca/ca.crt
+      - xpack.security.transport.ssl.certificate=/usr/share/elasticsearch/config/certs/es-node-1/es-node-1.crt
+      - xpack.security.transport.ssl.key=/usr/share/elasticsearch/config/certs/es-node-1/es-node-1.key
+      - ELASTIC_PASSWORD=Es@2026#Admin
     ports:
-      - "9200:9200"  # HTTP REST API 端口
-      - "9300:9300"  # 集群节点通信端口（单节点可选）
+      - "9200:9200"
+      - "9300:9300"
     volumes:
-      # 挂载自定义配置（包含 CORS 设置，不可通过环境变量传递 * 号）
       - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
-      # 数据持久化目录
-      - ./elasticsearch/data:/usr/share/elasticsearch/data
-      # 日志持久化目录
-      - ./elasticsearch/logs:/usr/share/elasticsearch/logs
+      - ./elasticsearch/certs:/usr/share/elasticsearch/config/certs
+      - ./elasticsearch/node1/data:/usr/share/elasticsearch/data
+      - ./elasticsearch/node1/logs:/usr/share/elasticsearch/logs
     ulimits:
-      # 关闭内存交换锁定限制（ES 性能要求）
       memlock:
         soft: -1
         hard: -1
-      # 最大文件描述符数量
+      nofile:
+        soft: 65535
+        hard: 65535
+    networks:
+      - elk-network
+
+  # ==================== Elasticsearch Node 2 ====================
+  es-node-2:
+    image: elasticsearch:8.11.4
+    container_name: es-node-2
+    restart: always
+    environment:
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - _JAVA_OPTIONS=-XX:UseSVE=0
+      - cluster.name=es-dev-cluster
+      - node.name=es-node-2
+      - discovery.seed_hosts=es-node-1,es-node-3
+      - cluster.initial_master_nodes=es-node-1,es-node-2,es-node-3
+      - xpack.security.enabled=true
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/ca/ca.crt
+      - xpack.security.transport.ssl.certificate=/usr/share/elasticsearch/config/certs/es-node-2/es-node-2.crt
+      - xpack.security.transport.ssl.key=/usr/share/elasticsearch/config/certs/es-node-2/es-node-2.key
+      - ELASTIC_PASSWORD=Es@2026#Admin
+    ports:
+      - "9201:9200"
+      - "9301:9300"
+    volumes:
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./elasticsearch/certs:/usr/share/elasticsearch/config/certs
+      - ./elasticsearch/node2/data:/usr/share/elasticsearch/data
+      - ./elasticsearch/node2/logs:/usr/share/elasticsearch/logs
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65535
+        hard: 65535
+    networks:
+      - elk-network
+
+  # ==================== Elasticsearch Node 3 ====================
+  es-node-3:
+    image: elasticsearch:8.11.4
+    container_name: es-node-3
+    restart: always
+    environment:
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - _JAVA_OPTIONS=-XX:UseSVE=0
+      - cluster.name=es-dev-cluster
+      - node.name=es-node-3
+      - discovery.seed_hosts=es-node-1,es-node-2
+      - cluster.initial_master_nodes=es-node-1,es-node-2,es-node-3
+      - xpack.security.enabled=true
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/ca/ca.crt
+      - xpack.security.transport.ssl.certificate=/usr/share/elasticsearch/config/certs/es-node-3/es-node-3.crt
+      - xpack.security.transport.ssl.key=/usr/share/elasticsearch/config/certs/es-node-3/es-node-3.key
+      - ELASTIC_PASSWORD=Es@2026#Admin
+    ports:
+      - "9202:9200"
+      - "9302:9300"
+    volumes:
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./elasticsearch/certs:/usr/share/elasticsearch/config/certs
+      - ./elasticsearch/node3/data:/usr/share/elasticsearch/data
+      - ./elasticsearch/node3/logs:/usr/share/elasticsearch/logs
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
       nofile:
         soft: 65535
         hard: 65535
@@ -57,15 +129,14 @@ services:
     container_name: kibana
     restart: always
     depends_on:
-      - elasticsearch  # 等待 ES 启动后再启动
+      - es-node-1
+      - es-node-2
+      - es-node-3
     ports:
-      - "5601:5601"  # Kibana Web 访问端口
+      - "5601:5601"
     environment:
-      # 以下配置已在 ../kibana/config/kibana.yml 中定义，无需重复设置
-      # Node.js 运行时内存限制（无法写入 kibana.yml，必须用环境变量）
       - NODE_OPTIONS=--max-old-space-size=1024
     volumes:
-      # 挂载自定义 Kibana 配置文件
       - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
     networks:
       - elk-network
@@ -76,26 +147,20 @@ services:
     container_name: logstash
     restart: always
     depends_on:
-      - elasticsearch  # 等待 ES 启动后再启动
+      - es-node-1
+      - es-node-2
+      - es-node-3
     ports:
-      - "5044:5044"  # Beats 数据接收端口（Filebeat/Metricbeat 上报）
-      - "9600:9600"  # Logstash 监控 API 端口
+      - "5044:5044"
+      - "9600:9600"
     environment:
-      # JVM 堆内存配置
       - LS_JAVA_OPTS=-Xms512m -Xmx1g
-      # Apple M4 芯片适配：Logstash 基于 JVM，同样需要禁用 SVE 指令集
       - _JAVA_OPTIONS=-XX:UseSVE=0
-      # ES 连接信息（供 pipeline 配置引用）
-      - ES_HOST=elasticsearch
-      - ES_PORT=9200
       - ES_USER=elastic
       - ES_PASS=Es@2026#Admin
     volumes:
-      # 只挂载 logstash.yml 单个文件，避免覆盖容器内默认的 log4j2.properties/jvm.options 等文件
       - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
-      # 数据管道配置（*.conf 文件）
       - ./logstash/pipeline:/usr/share/logstash/pipeline
-      # 日志持久化目录
       - ./logstash/logs:/usr/share/logstash/logs
     networks:
       - elk-network

@@ -1,5 +1,5 @@
 # 集群名称（与 docker-compose 环境变量保持一致）
-cluster.name: "docker-cluster"
+cluster.name: "es-dev-cluster"
 # 监听所有网络接口，允许容器外部访问
 network.host: 0.0.0.0
 # 开启跨域支持（供前端/开发工具访问）
