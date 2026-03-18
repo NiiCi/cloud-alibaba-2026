@@ -8,6 +8,7 @@
         <module>cloud-common</module>
         <module>cloud-gateway</module>
         <module>cloud-seata</module>
+        <module>cloud-elasticsearch</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>

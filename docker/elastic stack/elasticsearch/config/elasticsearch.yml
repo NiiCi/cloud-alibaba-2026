@@ -1,0 +1,11 @@
+# 集群名称（与 docker-compose 环境变量保持一致）
+cluster.name: "docker-cluster"
+# 监听所有网络接口，允许容器外部访问
+network.host: 0.0.0.0
+# 开启跨域支持（供前端/开发工具访问）
+http.cors.enabled: true
+# 允许所有来源跨域（生产环境建议限定具体域名）
+# 注意：* 号不能通过环境变量传递给 ES（会被解析为 YAML 别名导致启动失败），必须写在此文件中
+http.cors.allow-origin: "*"
+# 允许的请求头
+http.cors.allow-headers: "Authorization,Content-Type"

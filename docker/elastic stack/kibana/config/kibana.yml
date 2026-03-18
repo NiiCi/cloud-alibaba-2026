@@ -1,0 +1,20 @@
+# Kibana 服务器配置
+server.host: "0.0.0.0"
+server.port: 5601
+# 服务名称（用于日志标识）
+server.name: "kibana-dev"
+
+# Elasticsearch 连接配置
+elasticsearch.hosts: ["http://elasticsearch:9200"]
+# 使用 Service Account Token 认证（ES 8.x 禁止直接使用 elastic 超级用户账号）
+# 通过以下命令生成：curl -X POST -u elastic:<password> http://localhost:9200/_security/service/elastic/kibana/credential/token/<token-name>
+elasticsearch.serviceAccountToken: "AAEAAWVsYXN0aWMva2liYW5hL2tpYmFuYS10b2tlbi0xOlpNb2NvWGlLU3ZDUUxIYmV5TTJSeEE"
+
+# 界面语言（中文）
+i18n.locale: "zh-CN"
+
+# 安全配置：关闭 SSL（与 ES 保持一致，本地开发无需）
+# elasticsearch.ssl.verificationMode: none
+
+# 日志级别（开发环境可调为 debug 排查问题）
+logging.root.level: info
