@@ -4,7 +4,9 @@ services:
 
   # ==================== Elasticsearch Node 1 ====================
   es-node-1:
-    image: elasticsearch:8.11.4
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: es-node-1
     restart: always
     environment:
@@ -47,7 +49,9 @@ services:
 
   # ==================== Elasticsearch Node 2 ====================
   es-node-2:
-    image: elasticsearch:8.11.4
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: es-node-2
     restart: always
     environment:
@@ -86,7 +90,9 @@ services:
 
   # ==================== Elasticsearch Node 3 ====================
   es-node-3:
-    image: elasticsearch:8.11.4
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: es-node-3
     restart: always
     environment:
