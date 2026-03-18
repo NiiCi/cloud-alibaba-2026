@@ -31,3 +31,15 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Large binary files ###
+*.tar
+*.zip
+*.DS_Store
+docker/images/
+docker/elastic\ stack/elasticsearch/data/
+docker/elastic\ stack/elasticsearch/logs/
+docker/elastic\ stack/elasticsearch/node*/
+docker/elastic\ stack/elasticsearch/certs/ca/
+docker/elastic\ stack/elasticsearch/certs/es-node-*/
+docker/elastic\ stack/elasticsearch/certs/*.zip

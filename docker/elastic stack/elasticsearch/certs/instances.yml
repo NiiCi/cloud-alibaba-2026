@@ -1,0 +1,19 @@
+instances:
+  - name: es-node-1
+    dns:
+      - es-node-1
+      - localhost
+    ip:
+      - 127.0.0.1
+  - name: es-node-2
+    dns:
+      - es-node-2
+      - localhost
+    ip:
+      - 127.0.0.1
+  - name: es-node-3
+    dns:
+      - es-node-3
+      - localhost
+    ip:
+      - 127.0.0.1
