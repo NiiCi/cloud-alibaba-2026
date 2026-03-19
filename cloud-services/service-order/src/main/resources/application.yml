@@ -105,8 +105,11 @@ spring:
 server:
   port: 8001
 
+# 日志文件输出路径（Filebeat 监控此目录）
 # 配置日志级别 -- 需要配置成debug
 logging:
+  file:
+    path: /Users/niici/local/xjyc/cloud-alibaba-2026/logs
   level:
     com.niici.order: debug
 

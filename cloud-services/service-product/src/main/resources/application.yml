@@ -33,3 +33,10 @@ server:
 feign:
   sentinel:
     enabled: true
+
+# 日志文件输出路径（Filebeat 监控此目录）
+logging:
+  file:
+    path: /Users/niici/local/xjyc/cloud-alibaba-2026/logs
+  level:
+    com.niici: debug

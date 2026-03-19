@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 从 application.yml 注入配置 -->
+    <springProperty name="APP_NAME"  source="spring.application.name" defaultValue="app"/>
+    <springProperty name="LOG_PATH"  source="logging.file.path"        defaultValue="./logs"/>
+    <springProperty name="LOG_LEVEL" source="logging.level.root"        defaultValue="INFO"/>
+    <springProperty name="ENV"       source="spring.profiles.active"    defaultValue="dev"/>
+
+    <!-- ==================== 控制台 Appender（人类可读格式）==================== -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- 格式：时间 线程 级别 [traceId] 类名 - 消息 -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-}] %logger{40} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ==================== 文件 JSON Appender（腾讯云 CLS 风格，供 Filebeat 采集）==================== -->
+    <appender name="FILE_JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP_NAME}/${APP_NAME}.log</file>
+
+        <!-- 滚动策略：超过 100MB 或跨天滚动，保留 30 天 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}/${APP_NAME}-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>3GB</totalSizeCap>
+        </rollingPolicy>
+
+        <!--
+            使用 LoggingEventCompositeJsonEncoder 精确控制输出字段
+            参考腾讯云 CLS 日志格式：字段精简、命名直观、无 Logstash 噪音字段
+        -->
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <!-- 1. 时间（格式化为北京时间，字段名 time）-->
+                <timestamp>
+                    <fieldName>time</fieldName>
+                    <pattern>yyyy-MM-dd HH:mm:ss.SSS</pattern>
+                    <timeZone>Asia/Shanghai</timeZone>
+                </timestamp>
+
+                <!-- 2. 日志级别 -->
+                <logLevel>
+                    <fieldName>level</fieldName>
+                </logLevel>
+
+                <!-- 3. 服务名 + 环境（静态字段）-->
+                <pattern>
+                    <pattern>
+                        {
+                            "service": "${APP_NAME}",
+                            "env":     "${ENV}"
+                        }
+                    </pattern>
+                </pattern>
+
+                <!-- 4. 分布式追踪 ID（从 MDC 取，未设置时为空字符串）-->
+                <mdc>
+                    <includeMdcKeyName>traceId</includeMdcKeyName>
+                    <includeMdcKeyName>spanId</includeMdcKeyName>
+                </mdc>
+
+                <!-- 5. 线程名 -->
+                <threadName>
+                    <fieldName>thread</fieldName>
+                </threadName>
+
+                <!-- 6. 类名（缩写，最多 40 字符）-->
+                <loggerName>
+                    <fieldName>class</fieldName>
+                    <shortenedLoggerNameLength>40</shortenedLoggerNameLength>
+                </loggerName>
+
+                <!-- 8. 异常堆栈（无异常时不输出该字段）-->
+                <stackTrace>
+                    <fieldName>exception</fieldName>
+                    <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                        <maxDepthPerCause>20</maxDepthPerCause>
+                        <rootCauseFirst>true</rootCauseFirst>
+                    </throwableConverter>
+                </stackTrace>
+
+                <!-- 9. 格式化文本行（与控制台格式一致，专为 Kibana 单行展示使用）-->
+                <pattern>
+                    <pattern>{"message": "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-}] %logger{40} - %msg"}</pattern>
+                </pattern>
+            </providers>
+        </encoder>
+    </appender>
+
+    <!-- 异步包装（防止 I/O 阻塞业务线程）-->
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="FILE_JSON"/>
+        <queueSize>2048</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+    </appender>
+
+    <!-- ==================== Root Logger ==================== -->
+    <root level="${LOG_LEVEL}">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_FILE"/>
+    </root>
+</configuration>

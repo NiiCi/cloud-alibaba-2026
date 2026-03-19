@@ -1,0 +1,43 @@
+# ==================== 日志采集输入 ====================
+filebeat.inputs:
+  - type: filestream
+    id: microservices-json-logs
+    enabled: true
+    # 监控所有微服务日志文件（宿主机目录挂载到容器内 /var/log/microservices）
+    paths:
+      - /var/log/microservices/**/*.log
+
+    # 解析 ndjson 格式（每行一个 JSON），字段展平到 Beats 事件根节点
+    parsers:
+      - ndjson:
+          keys_under_root: true    # JSON 字段提升到根节点，直接可用
+          overwrite_keys: true     # 允许覆盖 Filebeat 内置字段（如 message）
+          add_error_key: true      # JSON 解析失败时添加 _ndjson_error 字段便于排查
+
+    # 文件指针状态（记录每个文件读到哪一行，重启后从断点续采）
+    file_identity.native: ~
+
+# ==================== 处理器 ====================
+processors:
+  # 注入宿主机元数据（hostname、IP 等）
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+
+# ==================== 输出到 Logstash ====================
+output.logstash:
+  hosts: ["logstash:5044"]
+  # 批量发送（企业级调优参数）
+  bulk_max_size: 2048
+  worker: 2
+  # 连接超时设置
+  timeout: 15
+
+# ==================== Filebeat 自身日志 ====================
+logging.level: info
+# 同时输出到 stderr（供 docker logs 查看）和文件
+logging.to_stderr: true
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat.log
+  keepfiles: 7

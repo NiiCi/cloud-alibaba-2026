@@ -171,6 +171,24 @@ services:
     networks:
       - elk-network
 
+  # ==================== Filebeat ====================
+  filebeat:
+    image: elastic/filebeat:8.11.4
+    container_name: filebeat
+    restart: always
+    user: root    # 需要 root 权限读取宿主机日志文件
+    depends_on:
+      - logstash
+    volumes:
+      # Filebeat 配置文件
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      # 挂载宿主机日志目录（只读），供 Filebeat 监控
+      - /Users/niici/local/xjyc/cloud-alibaba-2026/logs:/var/log/microservices:ro
+      # Filebeat 自身状态持久化（记录文件读取位置，防重复消费）
+      - ./filebeat/data:/usr/share/filebeat/data
+    networks:
+      - elk-network
+
 # ELK 统一网络
 networks:
   elk-network:

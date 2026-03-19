@@ -1239,6 +1239,402 @@ POST /_snapshot/my_backup/snapshot_1/_restore
 2. **合理刷新间隔**：大批量导入数据时，可临时设置 `"refresh_interval": "-1"` 关闭自动刷新
 3. **副本数归零导入**：大批量导入时临时设置 `"number_of_replicas": 0`，导完再恢复
 
+--
+
+## 十三、ELK 日志收集（企业级实战）
+
+> 本章记录项目中基于 **Filebeat + Logstash + Elasticsearch + Kibana** 实现微服务日志统一收集与可视化的完整方案，对应目录 `docker/elastic stack/`。
+
+### 13.1 整体架构
+
+```
+Spring Boot 服务
+    │  logback-spring.xml 写 JSON 格式日志到文件
+    ↓
+宿主机日志目录（/Users/niici/local/xjyc/cloud-alibaba-2026/logs）
+    │  Docker Volume 挂载只读
+    ↓
+Filebeat（容器）
+    │  filestream 输入，ndjson 解析，按行读取
+    ↓
+Logstash（容器，端口 5044）
+    │  date filter 修正时间戳，mutate 清理噪音字段
+    ↓
+Elasticsearch 集群（3 节点）
+    │  索引：spring-logs-{service}-{YYYY.MM.dd}
+    ↓
+Kibana（端口 5601）
+    Discover 页面实时查询
+```
+
+**选型理由（方案 A vs 方案 B）**
+
+| 维度 | 方案 A：Filebeat 文件采集（本项目）| 方案 B：Logback TCP 直推 |
+|------|---------------------------------|-----------------------|
+| 应用侵入性 | 低，只需配置 logback 写文件 | 高，依赖网络连接 |
+| 可靠性 | 文件持久化，Filebeat 断点续采 | Logstash 宕机则丢日志 |
+| 性能影响 | 异步写文件，业务线程无阻塞 | 网络 I/O 可能影响业务 |
+| 企业使用率 | ✅ 主流 | 少见 |
+
+---
+
+### 13.2 依赖配置
+
+在需要采集日志的服务 `pom.xml` 中引入 JSON 编码器（已在根 pom.xml 版本管理）：
+
+```xml
+<!-- 根 pom.xml properties -->
+<logstash-logback-encoder.version>7.4</logstash-logback-encoder.version>
+
+<!-- 根 pom.xml dependencyManagement -->
+<dependency>
+    <groupId>net.logstash.logback</groupId>
+    <artifactId>logstash-logback-encoder</artifactId>
+    <version>${logstash-logback-encoder.version}</version>
+</dependency>
+
+<!-- 各服务 pom.xml -->
+<dependency>
+    <groupId>net.logstash.logback</groupId>
+    <artifactId>logstash-logback-encoder</artifactId>
+</dependency>
+```
+
+---
+
+### 13.3 Spring Boot 日志配置（logback-spring.xml）
+
+每个微服务在 `src/main/resources/logback-spring.xml` 配置双路输出：
+- **CONSOLE**：人类可读文本格式，供本地开发调试
+- **FILE_JSON**：JSON 格式写文件，供 Filebeat 采集
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 从 application.yml 注入配置 -->
+    <springProperty name="APP_NAME"  source="spring.application.name" defaultValue="app"/>
+    <springProperty name="LOG_PATH"  source="logging.file.path"        defaultValue="./logs"/>
+    <springProperty name="LOG_LEVEL" source="logging.level.root"        defaultValue="INFO"/>
+    <springProperty name="ENV"       source="spring.profiles.active"    defaultValue="dev"/>
+
+    <!-- 控制台 Appender（人类可读格式，本地开发用）-->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- 格式：时间 线程 级别 [traceId] 类名 - 消息 -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-}] %logger{40} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 文件 JSON Appender（供 Filebeat 采集，写入 ELK）-->
+    <appender name="FILE_JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 日志文件路径：{logging.file.path}/{服务名}/{服务名}.log -->
+        <file>${LOG_PATH}/${APP_NAME}/${APP_NAME}.log</file>
+
+        <!-- 滚动策略：超过 100MB 或跨天滚动，保留 30 天，gzip 压缩 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}/${APP_NAME}-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>3GB</totalSizeCap>
+        </rollingPolicy>
+
+        <!-- LoggingEventCompositeJsonEncoder：精确控制 JSON 字段，对标腾讯云 CLS 格式 -->
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <!-- 1. 时间（北京时间，字段名 time）-->
+                <timestamp>
+                    <fieldName>time</fieldName>
+                    <pattern>yyyy-MM-dd HH:mm:ss.SSS</pattern>
+                    <timeZone>Asia/Shanghai</timeZone>
+                </timestamp>
+                <!-- 2. 日志级别 -->
+                <logLevel><fieldName>level</fieldName></logLevel>
+                <!-- 3. 服务名 + 环境（静态字段）-->
+                <pattern>
+                    <pattern>{"service": "${APP_NAME}", "env": "${ENV}"}</pattern>
+                </pattern>
+                <!-- 4. 分布式追踪 ID（从 MDC 取，接入 Sleuth/SkyWalking 后自动填充）-->
+                <mdc>
+                    <includeMdcKeyName>traceId</includeMdcKeyName>
+                    <includeMdcKeyName>spanId</includeMdcKeyName>
+                </mdc>
+                <!-- 5. 线程名 -->
+                <threadName><fieldName>thread</fieldName></threadName>
+                <!-- 6. 类名（缩写到 40 字符）-->
+                <loggerName>
+                    <fieldName>class</fieldName>
+                    <shortenedLoggerNameLength>40</shortenedLoggerNameLength>
+                </loggerName>
+                <!-- 7. 异常堆栈（无异常时不输出该字段）-->
+                <stackTrace>
+                    <fieldName>exception</fieldName>
+                    <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                        <maxDepthPerCause>20</maxDepthPerCause>
+                        <rootCauseFirst>true</rootCauseFirst>
+                    </throwableConverter>
+                </stackTrace>
+                <!-- 8. 格式化文本行（与控制台格式一致，作为 Kibana message 字段展示）-->
+                <pattern>
+                    <pattern>{"message": "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-}] %logger{40} - %msg"}</pattern>
+                </pattern>
+            </providers>
+        </encoder>
+    </appender>
+
+    <!-- 异步包装（防止磁盘 I/O 阻塞业务线程）-->
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="FILE_JSON"/>
+        <queueSize>2048</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+    </appender>
+
+    <root level="${LOG_LEVEL}">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_FILE"/>
+    </root>
+</configuration>
+```
+
+**写出的 JSON 日志示例**：
+
+```json
+{
+  "time":    "2026-03-19 15:33:21.498",
+  "level":   "INFO",
+  "service": "service-order",
+  "env":     "test",
+  "thread":  "http-nio-8081-exec-1",
+  "class":   "c.niici.order.controller.OrderController",
+  "message": "2026-03-19 15:33:21.498 [http-nio-8081-exec-1] INFO  [] c.niici.order.controller.OrderController - 下单成功"
+}
+```
+
+**application.yml 需配置日志文件路径**：
+
+```yaml
+logging:
+  file:
+    path: /Users/niici/local/xjyc/cloud-alibaba-2026/logs  # 宿主机路径，与 docker volume 对应
+  level:
+    com.niici: debug
+```
+
+---
+
+### 13.4 Filebeat 配置
+
+文件路径：`docker/elastic stack/filebeat/filebeat.yml`
+
+```yaml
+filebeat.inputs:
+  - type: filestream
+    id: microservices-json-logs
+    enabled: true
+    # 监控所有微服务日志（宿主机目录挂载到容器内 /var/log/microservices）
+    paths:
+      - /var/log/microservices/**/*.log
+    # 解析 NDJSON 格式（每行一个 JSON）
+    parsers:
+      - ndjson:
+          keys_under_root: true   # JSON 字段提升到根节点
+          overwrite_keys: true    # 允许覆盖 Filebeat 内置字段（如 message）
+          add_error_key: true     # 解析失败时添加 _ndjson_error 便于排查
+    file_identity.native: ~       # 记录文件指针，重启后从断点续采
+
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+
+output.logstash:
+  hosts: ["logstash:5044"]
+  bulk_max_size: 2048
+  worker: 2
+  timeout: 15
+
+logging.level: info
+logging.to_stderr: true   # 输出到 stderr，docker logs -f filebeat 可看到
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat.log
+  keepfiles: 7
+```
+
+**docker-compose.yml 中 Filebeat 服务配置**：
+
+```yaml
+filebeat:
+  image: elastic/filebeat:8.11.4
+  container_name: filebeat
+  restart: always
+  user: root               # 需要 root 权限读取日志文件
+  depends_on:
+    - logstash
+  volumes:
+    - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    # 宿主机日志目录 → 容器内 /var/log/microservices（只读）
+    - /Users/niici/local/xjyc/cloud-alibaba-2026/logs:/var/log/microservices:ro
+    - ./filebeat/data:/usr/share/filebeat/data   # 断点状态持久化
+  networks:
+    - elk-network
+```
+
+---
+
+### 13.5 Logstash Pipeline 配置
+
+文件路径：`docker/elastic stack/logstash/pipeline/logstash.conf`
+
+```conf
+input {
+  beats {
+    port => 5044   # 接收 Filebeat 推送
+  }
+}
+
+filter {
+  # 识别 Spring Boot 微服务日志（logback 注入了 service 字段）
+  if [service] {
+    # 用应用实际打日志的 time 字段覆盖 @timestamp
+    # 避免 @timestamp 显示 Logstash 收到日志的时间（比应用时间晚几秒）
+    date {
+      match    => ["time", "yyyy-MM-dd HH:mm:ss.SSS"]
+      target   => "@timestamp"
+      timezone => "Asia/Shanghai"
+    }
+    # 清理 Filebeat 注入的冗余元数据字段
+    mutate {
+      remove_field => ["agent", "ecs", "input", "tags", "log"]
+    }
+  }
+}
+
+output {
+  if [service] {
+    # 微服务日志：按服务名 + 日期分索引
+    # 例：spring-logs-service-order-2026.03.19
+    elasticsearch {
+      hosts    => ["http://es-node-1:9200", "http://es-node-2:9200", "http://es-node-3:9200"]
+      user     => "${ES_USER}"
+      password => "${ES_PASS}"
+      index    => "spring-logs-%{[service]}-%{+YYYY.MM.dd}"
+    }
+  } else {
+    # 其他 Beats 来源保持原有命名规则
+    elasticsearch {
+      hosts    => ["http://es-node-1:9200", "http://es-node-2:9200", "http://es-node-3:9200"]
+      user     => "${ES_USER}"
+      password => "${ES_PASS}"
+      index    => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
+    }
+  }
+  # 调试时可开启（生产环境注释掉）
+  # stdout { codec => rubydebug }
+}
+```
+
+**索引命名规则说明**：
+
+| 服务 | 索引示例 |
+|------|----------|
+| service-order | `spring-logs-service-order-2026.03.19` |
+| service-product | `spring-logs-service-product-2026.03.19` |
+
+> 按服务+日期分索引的好处：可以按时间删除旧索引（ILM 生命周期管理），也可以按服务单独查询，不相互干扰。
+
+---
+
+### 13.6 Kibana 配置
+
+#### 创建 Data View
+
+1. **Stack Management** → **Data Views** → **Create data view**
+2. **Name**：`spring-logs-*`，**Index pattern**：`spring-logs-*`，**Time field**：`@timestamp`
+3. 保存后进入 **Discover** 页面
+
+> Kibana 8.x 已将 **Index Patterns** 改名为 **Data Views**，路径相同。
+
+#### Discover 字段展示
+
+- 移除"选定字段"中所有字段 → 显示 **Document** 默认视图
+- Document 列展示 `message` 字段的完整格式化文本，效果类似腾讯云 CLS
+- 配置好视图后将 **Kibana URL 加入浏览器书签**，下次直接访问无需重新配置
+
+#### 常用 KQL 过滤
+
+```
+# 只看某个服务
+service: "service-order"
+
+# 只看 ERROR 和 WARN
+level: ("ERROR" or "WARN")
+
+# 查某个服务的错误
+service: "service-order" and level: "ERROR"
+
+# 关键字搜索
+message: "下单失败"
+
+# 按 traceId 追踪一次请求的完整链路（接入分布式追踪后使用）
+traceId: "abc123"
+```
+
+---
+
+### 13.7 日志数据流图
+
+```
+logback-spring.xml
+  ├── CONSOLE appender  →  控制台（人类可读文本，本地调试）
+  └── ASYNC_FILE
+        └── FILE_JSON appender  →  {LOG_PATH}/{service}/{service}.log
+                                          │
+                                   Filebeat（filestream 输入）
+                                   ndjson 解析，字段展平到根节点
+                                          │
+                                   Logstash 5044 端口
+                                   date filter（time → @timestamp）
+                                   mutate（清理噪音字段）
+                                          │
+                                   Elasticsearch
+                                   索引：spring-logs-{service}-{date}
+                                          │
+                                   Kibana Discover
+                                   实时查询 / KQL 过滤
+```
+
+---
+
+### 13.8 常见问题排查
+
+#### Filebeat 无日志输出
+
+```bash
+docker logs -f filebeat
+```
+
+确认 `filebeat.yml` 中设置了 `logging.to_stderr: true`，否则日志只写到容器内文件，`docker logs` 看不到。
+
+#### @timestamp 时间不对
+
+**现象**：Kibana 中 `@timestamp` 比应用实际打日志时间晚几秒  
+**原因**：`@timestamp` 默认是 Logstash 收到日志的时间  
+**解决**：logstash.conf 中用 `date` filter 将应用日志的 `time` 字段覆盖 `@timestamp`
+
+```conf
+date {
+  match    => ["time", "yyyy-MM-dd HH:mm:ss.SSS"]
+  target   => "@timestamp"
+  timezone => "Asia/Shanghai"
+}
+```
+
+#### 新增日志字段后 Kibana 看不到
+
+**Stack Management** → **Data Views** → 找到 `spring-logs-*` → 点击 **Refresh fields**
+
 ---
 
 ## 相关链接
