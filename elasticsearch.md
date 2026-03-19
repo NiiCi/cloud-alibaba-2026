@@ -237,6 +237,67 @@ PUT /product-index
 }
 ```
 
+### 4.3 name 字段 Mapping 详解（text + IK 分词 + keyword 多字段）
+
+```json
+"name": {
+    "type": "text",
+    "analyzer": "ik_max_word",
+    "search_analyzer": "ik_smart",
+    "fields": {
+        "keyword": { "type": "keyword" }
+    }
+}
+```
+
+**① `"type": "text"`**
+
+`name` 字段的主类型是 `text`，写入时会被分词器拆分成多个词条，用于**全文检索**。
+
+**② `"analyzer": "ik_max_word"`（写入分析器）**
+
+写入文档时使用 IK **最细粒度**分词，尽可能多地切词：
+
+```
+"华为Mate60旗舰手机" → ["华为", "Mate60", "旗舰", "手机", "旗舰手机"]
+```
+
+词条越多，**召回率越高**（更容易被搜索到）。
+
+**③ `"search_analyzer": "ik_smart"`（搜索分析器）**
+
+搜索时使用 IK **最粗粒度**分词，按语义切词：
+
+```
+搜索 "华为旗舰手机" → ["华为", "旗舰手机"]
+```
+
+词条越少，**精确度越高**（避免过度匹配噪音结果）。
+
+> **写入细粒度 + 搜索粗粒度** = 既保证召回率又保证精准度，是中文全文搜索的最佳实践。
+
+**④ `"fields": { "keyword": { "type": "keyword" } }`（多字段 multi-fields）**
+
+为 `name` 额外增加一个子字段 `name.keyword`（不分词），同一个值以两种形式存储：
+
+| 访问方式 | 类型 | 适用场景 |
+|---------|------|----------|
+| `name` | `text` | 全文检索：`match`、`match_phrase` |
+| `name.keyword` | `keyword` | 精确匹配、排序、聚合：`term`、`sort`、`aggs` |
+
+**使用示例：**
+
+```json
+// 全文搜索（走 text 主字段）
+{ "match": { "name": "华为手机" } }
+
+// 精确匹配（走 keyword 子字段）
+{ "term": { "name.keyword": "华为 Mate60 Pro" } }
+
+// 按名称聚合统计（走 keyword 子字段）
+{ "terms": { "field": "name.keyword" } }
+```
+
 ---
 
 ## 五、REST API 基本操作（CRUD）
@@ -630,7 +691,7 @@ public interface ProductRepository extends ElasticsearchRepository<Product, Stri
     // 根据名称模糊查询
     List<Product> findByNameContaining(String name);
 
-    // 根据价格区间查询
+    // 根据价格区间查询                                                                 
     List<Product> findByPriceBetween(Double minPrice, Double maxPrice);
 
     // 根据标签精确查询
@@ -684,6 +745,221 @@ public class ProductSearchService {
 | `@Id` | 标记文档 ID 字段 |
 | `@Field` | 定义字段的 ES 类型、分析器等 |
 | `@Setting` | 设置索引的分片数、副本数等 |
+
+### 9.7 企业级完整示例
+
+#### 9.7.1 实体类（完整版）
+
+```java
+@Data
+@Document(indexName = "product_index", createIndex = true)
+@Setting(shards = 3, replicas = 1)
+public class Product {
+
+    @Id
+    private String id;
+
+    /**
+     * text：全文检索，写入时用 ik_max_word 细粒度分词，搜索时用 ik_smart 粗粒度分词
+     * keyword 子字段：精确匹配 / 排序 / 聚合，通过 name.keyword 访问
+     */
+    @MultiField(
+            mainField = @Field(type = FieldType.Text, analyzer = "ik_max_word", searchAnalyzer = "ik_smart"),
+            otherFields = {@InnerField(suffix = "keyword", type = FieldType.Keyword)}
+    )
+    private String name;
+
+    // scaled_float：精度可控，适合金额字段（99.99 存储为 9999）
+    @Field(type = FieldType.Scaled_Float, scalingFactor = 100)
+    private BigDecimal price;
+
+    @Field(type = FieldType.Integer)
+    private Integer stock;
+
+    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    private String description;
+
+    @Field(type = FieldType.Keyword)
+    private List<String> tags;
+
+    @Field(type = FieldType.Date, format = DateFormat.date_time)
+    private LocalDateTime createTime;
+}
+```
+
+#### 9.7.2 查询请求 DTO
+
+```java
+@Data
+public class ProductSearchRequest {
+    /** 全文检索关键词（搜索 name / description 字段）*/
+    private String keyword;
+    /** 最低价格 */
+    private BigDecimal minPrice;
+    /** 最高价格 */
+    private BigDecimal maxPrice;
+    /** 标签精确过滤（多个标签取 IN 并集）*/
+    private List<String> tags;
+    /** 页码，从 0 开始 */
+    private int page = 0;
+    /** 每页条数 */
+    private int size = 10;
+}
+```
+
+#### 9.7.3 Repository（方法命名查询）
+
+```java
+@Repository
+public interface ProductRepository extends ElasticsearchRepository<Product, String> {
+
+    // 名称全文匹配（分页）
+    Page<Product> findByNameContaining(String name, Pageable pageable);
+
+    // 价格区间
+    List<Product> findByPriceBetween(BigDecimal minPrice, BigDecimal maxPrice);
+
+    // 标签精确匹配
+    List<Product> findByTags(String tag);
+
+    // 库存大于指定值且包含指定标签
+    List<Product> findByStockGreaterThanAndTags(Integer stock, String tag);
+}
+```
+
+#### 9.7.4 Service 接口
+
+```java
+public interface ProductSearchService {
+
+    // ==================== 写入操作 ====================
+    Product save(Product product);          // 单条保存（新增 / 更新）
+    void batchSave(List<Product> products); // 批量保存
+    void delete(String id);                 // 根据 ID 删除
+
+    // ==================== 查询操作 ====================
+    // 简单查询（兼容原有接口）
+    SearchHits<Product> search(String keyword, Double minPrice, Double maxPrice, int page, int size);
+    // 企业级复合查询：全文检索 + 价格过滤 + 标签过滤 + 分页排序 + 高亮
+    SearchHits<Product> searchWithRequest(ProductSearchRequest request);
+    // 按标签聚合：统计每组数量及平均价格
+    SearchHits<Product> aggregateByTag();
+}
+```
+
+#### 9.7.5 ServiceImpl（核心实现）
+
+```java
+@Service
+public class ProductSearchServiceImpl implements ProductSearchService {
+
+    @Resource
+    private ProductRepository productRepository;
+    @Resource
+    private ElasticsearchOperations elasticsearchOperations;
+
+    @Override
+    public Product save(Product product) {
+        if (product.getId() == null) product.setId(UUID.randomUUID().toString());
+        if (product.getCreateTime() == null) product.setCreateTime(LocalDateTime.now());
+        return productRepository.save(product);
+    }
+
+    // 批量写入（比逐条 save 效率高 5-10 倍）
+    @Override
+    public void batchSave(List<Product> products) {
+        products.forEach(p -> {
+            if (p.getId() == null) p.setId(UUID.randomUUID().toString());
+            if (p.getCreateTime() == null) p.setCreateTime(LocalDateTime.now());
+        });
+        productRepository.saveAll(products);
+    }
+
+    @Override
+    public void delete(String id) {
+        productRepository.deleteById(id);
+    }
+
+    /**
+     * 企业级复合查询：全文检索 + 价格过滤 + 标签过滤 + 分页排序 + 关键词高亮
+     */
+    @Override
+    public SearchHits<Product> searchWithRequest(ProductSearchRequest req) {
+        BoolQuery.Builder boolQuery = new BoolQuery.Builder();
+
+        // must：同时搜索 name 和 description，影响相关性评分
+        if (StringUtils.hasText(req.getKeyword())) {
+            boolQuery.must(m -> m.multiMatch(mq -> mq
+                    .fields("name", "description")
+                    .query(req.getKeyword())));
+        }
+
+        // filter：价格范围（不影响评分，结果会被 ES 缓存，性能更好）
+        if (req.getMinPrice() != null || req.getMaxPrice() != null) {
+            RangeQuery.Builder range = new RangeQuery.Builder().field("price");
+            if (req.getMinPrice() != null) range.gte(JsonData.of(req.getMinPrice()));
+            if (req.getMaxPrice() != null) range.lte(JsonData.of(req.getMaxPrice()));
+            boolQuery.filter(f -> f.range(range.build()));
+        }
+
+        // filter：标签精确匹配（terms = IN 查询）
+        if (!CollectionUtils.isEmpty(req.getTags())) {
+            List<FieldValue> tagValues = req.getTags().stream()
+                    .map(FieldValue::of).collect(Collectors.toList());
+            boolQuery.filter(f -> f.terms(t -> t
+                    .field("tags")
+                    .terms(tv -> tv.value(tagValues))));
+        }
+
+        // 高亮：命中词用 <em> 标签包裹，前端可直接渲染
+        HighlightFieldParameters params = HighlightFieldParameters.builder()
+                .withPreTags("<em>").withPostTags("</em>").build();
+        Highlight highlight = new Highlight(List.of(
+                new HighlightField("name", params),
+                new HighlightField("description", params)
+        ));
+
+        NativeQuery query = NativeQuery.builder()
+                .withQuery(q -> q.bool(boolQuery.build()))
+                .withHighlightQuery(new HighlightQuery(highlight, Product.class))
+                .withPageable(PageRequest.of(req.getPage(), req.getSize()))
+                .withSort(Sort.by(Sort.Direction.DESC, "_score"))       // 先按相关度
+                .withSort(Sort.by(Sort.Direction.DESC, "createTime"))   // 再按时间
+                .build();
+
+        return elasticsearchOperations.search(query, Product.class);
+    }
+
+    /**
+     * 按标签聚合：统计每组数量及平均价格
+     * withMaxResults(0)：只返回聚合结果，不返回文档本身
+     */
+    @Override
+    public SearchHits<Product> aggregateByTag() {
+        NativeQuery query = NativeQuery.builder()
+                .withQuery(q -> q.matchAll(m -> m))
+                .withAggregation("tag_group", Aggregation.of(a -> a
+                        .terms(t -> t.field("tags").size(20))
+                        .aggregations("avg_price", Aggregation.of(sub -> sub
+                                .avg(avg -> avg.field("price"))))))
+                .withMaxResults(0)
+                .build();
+
+        return elasticsearchOperations.search(query, Product.class);
+    }
+}
+```
+
+#### 9.7.6 两种查询方式对比
+
+| | Repository 方法命名查询 | ElasticsearchOperations |
+|---|---|---|
+| **适用场景** | 简单单条件查询 | 复杂多条件、聚合、高亮 |
+| **代码量** | 极少，接口声明即可 | 较多，需手动构建 Query |
+| **灵活性** | 低（条件固定）| 高（动态组合）|
+| **高亮支持** | ❌ | ✅ |
+| **聚合支持** | ❌ | ✅ |
+| **推荐用法** | 简单 CRUD、后台管理 | 前端搜索页、数据报表 |
 
 ---
 
