@@ -582,7 +582,7 @@ GET /_analyze
 ```yaml
 spring:
   elasticsearch:
-    uris: http://localhost:9200
+    uris: http://localhost:9200,http://localhost:9201,http://localhost:9202
     username: elastic
     password: Es@2026#Admin
     connection-timeout: 5s

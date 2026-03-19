@@ -17,8 +17,20 @@ spring:
         username: nacos
         password: nacos
         namespace: 5d5d91ba-a655-497c-bbe5-f7fe9424a6ac
-        prefix: seata-account
+        prefix: service-elasticsearch
         file-extension: yml
         # 禁用import check避免不必要的警告
         import-check:
           enabled: false
+  # Elasticsearch 连接配置
+  elasticsearch:
+    # 节点列表 - 逗号分隔, 不能有空格
+    uris: http://localhost:9200,http://localhost:9201,http://localhost:9202
+    # 节点用户名
+    username: elastic
+    # 节点密码
+    password: Es@2026#Admin
+    # 连接超时 - 单位：秒
+    connection-timeout: 5s
+    # 套接字超时 - 单位：秒
+    socket-timeout: 30s
