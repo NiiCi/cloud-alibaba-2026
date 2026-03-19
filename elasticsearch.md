@@ -1631,9 +1631,130 @@ date {
 }
 ```
 
-#### 新增日志字段后 Kibana 看不到
+#### 新增日志字悆后 Kibana 看不到
 
 **Stack Management** → **Data Views** → 找到 `spring-logs-*` → 点击 **Refresh fields**
+
+---
+
+### 13.9 高可用架构涉伸
+
+> 本项目为学习环境，Filebeat 和 Logstash 均为单实例。下面介绍企业生产环境中两个组件的高可用方案。
+
+#### Filebeat 的高可用
+
+**Filebeat 不需要集群，天然就是高可用的。**
+
+Filebeat 部署在每台应用服务器上，每台机器一个实例，相互独立：
+
+```
+应用服务器 1  →  Filebeat Agent 1  ┌
+应用服务器 2  →  Filebeat Agent 2  ├──→  Logstash
+应用服务器 3  →  Filebeat Agent 3  ┘
+```
+
+- 某台服务器的 Filebeat 挂了，只影响那台机器的日志，其他机器不受影响
+- Filebeat 重启后会**从断点续采**（`file_identity.native` 记录文件指针），不丢日志
+
+#### Logstash 的高可用——方案一：多实例 + 负载均衡
+
+```
+Filebeat  →  负载均衡器（Nginx / HAProxy / ELB）
+                    ├──→  Logstash 实例 1
+                    ├──→  Logstash 实例 2
+                    └──→  Logstash 实例 3
+                                │
+                        Elasticsearch 集群
+```
+
+Filebeat 配置多个 Logstash 地址，自带负载均衡和故障转移：
+
+```yaml
+output.logstash:
+  hosts:
+    - "logstash-1:5044"
+    - "logstash-2:5044"
+    - "logstash-3:5044"
+  loadbalance: true   # 开启负载均衡
+  worker: 2
+```
+
+#### Logstash 的高可用——方案二：引入 Kafka 消息队列（大规模场景）
+
+```
+Filebeat  →  Kafka 集群（消息缓冲层）  →  Logstash 集群  →  ES 集群
+```
+
+**Kafka 在其中的作用**：
+
+| 组件 | 职责 |
+|------|------|
+| Filebeat | 采集日志，推送到 Kafka |
+| Kafka | 消息缓冲、削峰、保证不丢失 |
+| Logstash | 从 Kafka 消费，解析处理后写入 ES |
+
+**Filebeat 输出改为 Kafka**：
+
+```yaml
+# filebeat.yml
+output.kafka:
+  hosts:
+    - "kafka-1:9092"
+    - "kafka-2:9092"
+    - "kafka-3:9092"
+  topic: "app-logs-%{[service]}"   # 按服务分 Topic
+  partition.round_robin:
+    reachable_only: false
+  required_acks: 1
+  compression: gzip
+  max_message_bytes: 1000000
+```
+
+**Logstash 输入改为 Kafka**：
+
+```conf
+input {
+  kafka {
+    bootstrap_servers => "kafka-1:9092,kafka-2:9092,kafka-3:9092"
+    topics_pattern    => "app-logs-.*"    # 订阅所有服务的 Topic
+    group_id          => "logstash-group" # 消费者组，多 Logstash 实例共享
+    codec             => "json"
+    consumer_threads  => 4               # 并发消费线程数
+    auto_offset_reset => "earliest"
+  }
+}
+```
+
+Kafka **消费者组机制**保证同一条消息只被一个 Logstash 实例消费，天然实现负载均衡：
+
+```
+Kafka Topic: app-logs-service-order
+    Partition 0  ──→  Logstash 实例 1（group_id: logstash-group）
+    Partition 1  ──→  Logstash 实例 2（group_id: logstash-group）
+    Partition 2  ──→  Logstash 实例 3（group_id: logstash-group）
+```
+
+**Kafka 为什么能保证不丢日志**：
+
+```
+正常流程：
+Filebeat → Kafka（持久化到磁盘）→ Logstash → ES
+
+Logstash 宕机时：
+Filebeat → Kafka（日志堆积在 Kafka，不丢失）
+                 ↑
+           Logstash 重启后继续从上次 offset 消费
+```
+
+#### 方案选型对比
+
+| 方案 | 日均日志量 | 复杂度 | 典型场景 |
+|------|-----------|--------|------------|
+| 单 Logstash | < 1 亿条 | 低 | 学习环境 / 小型项目 |
+| 多 Logstash + LB | 1~50 亿条 | 中 | 中大型企业 |
+| Filebeat → Kafka → Logstash 集群 | 50 亿+ | 高 | 大型互联网公司 |
+
+> 日均 50 亿条以下的场景，方案一已经完全够用，不必引入 Kafka 增加架构复杂度。
 
 ---
 
