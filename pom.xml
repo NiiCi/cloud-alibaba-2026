@@ -35,6 +35,7 @@
         <spring-cloud.version>2023.0.1</spring-cloud.version>
         <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
         <logstash-logback-encoder.version>7.4</logstash-logback-encoder.version>
+        <skywalking-toolkit.version>9.3.0</skywalking-toolkit.version>
     </properties>
 
     <dependencyManagement>
@@ -54,6 +55,12 @@
                 <version>${spring-cloud-alibaba.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!-- SkyWalking Logback 工具：自动将 TraceId 注入 MDC -->
+            <dependency>
+                <groupId>org.apache.skywalking</groupId>
+                <artifactId>apm-toolkit-logback-1.x</artifactId>
+                <version>${skywalking-toolkit.version}</version>
             </dependency>
             <!-- Logback JSON 序列化 + ELK 对接 -->
             <dependency>

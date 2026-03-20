@@ -8,9 +8,9 @@
 
     <!-- ==================== 控制台 Appender（人类可读格式）==================== -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <!-- 格式：时间 线程 级别 [traceId] 类名 - 消息 -->
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-}] %logger{40} - %msg%n</pattern>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <!-- 格式：时间 线程 级别 [SW TraceId] 类名 - 消息 -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{SW_CTX:-TID:N/A}] %logger{40} - %msg%n</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
@@ -55,8 +55,9 @@
                     </pattern>
                 </pattern>
 
-                <!-- 4. 分布式追踪 ID（从 MDC 取，未设置时为空字符串）-->
+                <!-- 4. 分布式追踪 ID（SkyWalking TraceId 自动注入，未启动 Agent 时输出 TID:N/A）-->
                 <mdc>
+                    <includeMdcKeyName>SW_CTX</includeMdcKeyName>
                     <includeMdcKeyName>traceId</includeMdcKeyName>
                     <includeMdcKeyName>spanId</includeMdcKeyName>
                 </mdc>
@@ -83,7 +84,7 @@
 
                 <!-- 9. 格式化文本行（与控制台格式一致，专为 Kibana 单行展示使用）-->
                 <pattern>
-                    <pattern>{"message": "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-}] %logger{40} - %msg"}</pattern>
+                    <pattern>{"message": "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{SW_CTX:-TID:N/A}] %logger{40} - %msg"}</pattern>
                 </pattern>
             </providers>
         </encoder>
