@@ -17,6 +17,15 @@ filebeat.inputs:
     # 文件指针状态（记录每个文件读到哪一行，重启后从断点续采）
     file_identity.native: ~
 
+    # 每1秒扫描文件变化（默认10s，减少日志采集延迟）
+    prospector.scanner.check_interval: 1s
+
+    # ===== macOS Docker 卷挂载延迟优化 =====
+    # 读到 EOF 后的退避策略（默认 init:2s, max:10s）
+    # 降低退避时间，更快发现新日志行
+    backoff.init: 500ms
+    backoff.max: 2s
+
 # ==================== 处理器 ====================
 processors:
   # 注入宿主机元数据（hostname、IP 等）

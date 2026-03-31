@@ -10,3 +10,7 @@ log.level: info
 
 # 关闭 X-Pack 监控（本地开发无需，避免报警告）
 xpack.monitoring.enabled: false
+
+# 批处理调优（解决开发环境日志少时延迟高的问题）
+pipeline.batch.size: 10     # 攒够10条即发送（默认125）
+pipeline.batch.delay: 5     # 最多等待5ms（默认50ms）
